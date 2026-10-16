@@ -321,7 +321,6 @@ onMounted(load)
           <dt>MongoDB</dt>
           <dd>
             <span :class="health?.mongo.ok ? 'ok' : 'err'">{{ health?.mongo.ok ? '已连接' : '未连接' }}</span>
-            <span class="mono small dim"> · {{ health?.mongo.uri }} / {{ health?.mongo.db }}</span>
             <div v-if="health?.mongo.error" class="small err mono break">{{ health.mongo.error }}</div>
           </dd>
           <dt>磁力解析</dt>

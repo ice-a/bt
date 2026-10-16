@@ -153,8 +153,7 @@ function previewLink(item: TorrentView) {
     </section>
 
     <div v-if="health && !health.mongo.ok" class="note warn mt rise rise-2">
-      MongoDB 未连接，搜索记录与种子缓存不会被保存（其余功能可用）。在 .env 配置正确的 MONGODB_URI（云端实例请填真实密码）后刷新即可：
-      <span class="mono">{{ health.mongo.uri }}</span>
+      MongoDB 未连接，搜索记录与种子缓存不会被保存（其余功能可用）。在 .env 配置正确的 MONGODB_URI 后刷新即可。
     </div>
 
     <div class="tabs rise rise-2">

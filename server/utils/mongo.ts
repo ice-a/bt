@@ -68,18 +68,23 @@ export async function downloadsCol(): Promise<Collection<DownloadDoc>> {
   return (await getDb()).collection<DownloadDoc>('downloads')
 }
 
-/** 供 /api/health 使用：探测 MongoDB 是否可用 */
+/** 把驱动错误里的连接串 / 主机名脱敏，避免泄露凭证与数据库地址 */
+function sanitizeMongoError(raw: string): string {
+  return raw
+    .replace(/mongodb(\+srv)?:\/\/[^\s'"]+/gi, '***')
+    .replace(/[a-z0-9.-]+\.mongodb\.net(?::\d+)?/gi, '***')
+}
+
+/** 供 /api/health 使用：探测 MongoDB 是否可用（不返回任何连接串 / 库名） */
 export async function mongoStatus() {
   try {
     const db = await getDb()
     await db.command({ ping: 1 })
-    return { ok: true, uri: mongoUri(), db: mongoDbName(), error: null as string | null }
+    return { ok: true, error: null as string | null }
   } catch (err) {
     return {
       ok: false,
-      uri: mongoUri(),
-      db: mongoDbName(),
-      error: lastError?.message || (err instanceof Error ? err.message : String(err))
+      error: sanitizeMongoError(lastError?.message || (err instanceof Error ? err.message : String(err)))
     }
   }
 }

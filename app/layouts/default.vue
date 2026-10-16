@@ -16,7 +16,7 @@ onMounted(() => {
 const mongoPill = computed(() => {
   if (!health.value) return { cls: '', text: 'MONGO ?' }
   return health.value.mongo.ok
-    ? { cls: 'on', text: `MONGO · ${health.value.mongo.db}` }
+    ? { cls: 'on', text: 'MONGO' }
     : { cls: 'off', text: 'MONGO 未连接' }
 })
 </script>
