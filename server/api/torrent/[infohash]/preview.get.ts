@@ -47,37 +47,45 @@ export default defineEventHandler(async (event) => {
   }
 
   const settings = await loadSettings()
-  const bytes = await withSwarm(infoHash, magnet, settings.metadataTimeout, async (torrent) => {
-    const target = (torrent.files || []).find(
-      (f: any) => normPath(String(f.path || f.name || '')) === normPath(filePath)
-    )
-    if (!target) {
-      throw createError({ statusCode: 404, statusMessage: '这个种子里没有该文件，文件清单可能已过期' })
-    }
-    if (target.length > MAX_PREVIEW_BYTES) {
-      throw createError({
-        statusCode: 413,
-        statusMessage: `这张图 ${Math.round(target.length / 1024 / 1024)} MB，超过在线预览上限 ${MAX_PREVIEW_BYTES / 1024 / 1024} MB`
-      })
-    }
-    return Promise.race<ArrayBuffer>([
-      target.arrayBuffer(),
-      new Promise<never>((_, reject) => {
-        setTimeout(
-          () => reject(new Error('下载图片超时：暂时没有可用的做种节点，稍后再试')),
-          DOWNLOAD_TIMEOUT_MS
-        )
-      })
-    ])
-  })
+  try {
+    const bytes = await withSwarm(infoHash, magnet, settings.metadataTimeout, async (torrent) => {
+      const target = (torrent.files || []).find(
+        (f: any) => normPath(String(f.path || f.name || '')) === normPath(filePath)
+      )
+      if (!target) {
+        throw createError({ statusCode: 404, statusMessage: '这个种子里没有该文件，文件清单可能已过期' })
+      }
+      if (target.length > MAX_PREVIEW_BYTES) {
+        throw createError({
+          statusCode: 413,
+          statusMessage: `这张图 ${Math.round(target.length / 1024 / 1024)} MB，超过在线预览上限 ${MAX_PREVIEW_BYTES / 1024 / 1024} MB`
+        })
+      }
+      return Promise.race<ArrayBuffer>([
+        target.arrayBuffer(),
+        new Promise<never>((_, reject) => {
+          setTimeout(
+            () => reject(new Error('下载图片超时：暂时没有可用的做种节点，稍后再试')),
+            DOWNLOAD_TIMEOUT_MS
+          )
+        })
+      ])
+    })
 
-  setHeader(event, 'content-type', mime)
-  setHeader(event, 'content-length', String(bytes.byteLength))
-  setHeader(
-    event,
-    'content-disposition',
-    `inline; filename="${encodeURIComponent(filePath.slice(filePath.lastIndexOf('/') + 1))}"`
-  )
-  setHeader(event, 'cache-control', 'private, max-age=3600')
-  return Buffer.from(bytes)
+    setHeader(event, 'content-type', mime)
+    setHeader(event, 'content-length', String(bytes.byteLength))
+    setHeader(
+      event,
+      'content-disposition',
+      `inline; filename="${encodeURIComponent(filePath.slice(filePath.lastIndexOf('/') + 1))}"`
+    )
+    setHeader(event, 'cache-control', 'private, max-age=3600')
+    return Buffer.from(bytes)
+  } catch (err) {
+    // 把 withSwarm 抛出的原始错误（如 webtorrent 无法加载）转成可读的 HTTP 错误，
+    // 避免前端看到 Nitro 的通用 Server Error 页面。
+    if (err && typeof err === 'object' && 'statusCode' in err) throw err
+    const message = err instanceof Error ? err.message : '从做种节点获取图片失败'
+    throw createError({ statusCode: 503, statusMessage: message })
+  }
 })

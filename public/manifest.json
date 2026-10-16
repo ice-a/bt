@@ -1,0 +1,19 @@
+{
+  "name": "BT 种子预览台",
+  "short_name": "BT 预览台",
+  "description": "搜索 / 解析 / 预览 BT 种子内容，并投递到本机下载工具",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f0f11",
+  "theme_color": "#0f0f11",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
