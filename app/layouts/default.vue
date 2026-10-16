@@ -19,6 +19,11 @@ const mongoPill = computed(() => {
     ? { cls: 'on', text: 'MONGO' }
     : { cls: 'off', text: 'MONGO 未连接' }
 })
+
+async function logout() {
+  await $fetch('/api/logout', { method: 'POST' }).catch(() => {})
+  await navigateTo('/gate', { reload: true })
+}
 </script>
 
 <template>
@@ -49,6 +54,7 @@ const mongoPill = computed(() => {
             <i class="dot" />
             {{ mongoPill.text }}
           </NuxtLink>
+          <button v-if="health?.authed" class="pill" type="button" @click="logout" title="退出登录">退出</button>
           <select class="pill lang-select" v-model="lang" title="Language" aria-label="Language">
             <option value="en">EN</option>
             <option value="zh">中文</option>

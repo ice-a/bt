@@ -235,7 +235,13 @@ export const zh2en: Record<string, string> = {
   '验证中': 'Verifying…',
   '密码错误': 'Wrong password',
   '验证失败': 'Verification failed',
-  '请输入密码': 'Please enter the password'
+  '请输入密码': 'Please enter the password',
+
+  // ===== 锁定 / 退出 =====
+  '退出': 'Logout',
+  '退出登录': 'Log out',
+  '尝试次数过多，账户已锁定': 'Too many failed attempts, account locked',
+  '锁定剩余': 'Locked: '
 }
 
 export const en2zh: Record<string, string> = Object.fromEntries(

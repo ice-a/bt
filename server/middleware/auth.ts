@@ -10,6 +10,7 @@ export default defineEventHandler((event) => {
   // 解锁接口、门禁页与 Nuxt 运行所需资源始终放行
   if (
     url === '/api/unlock' ||
+    url === '/api/logout' ||
     url === '/gate' ||
     url.startsWith('/_nuxt') ||
     url.startsWith('/__nuxt') ||

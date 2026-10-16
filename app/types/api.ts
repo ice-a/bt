@@ -101,4 +101,5 @@ export interface HealthResponse {
   enabledProviders: string[]
   searchProxy: string
   clients: { id: string; type: string; name: string; endpoint: string; enabled: boolean }[]
+  authed: boolean
 }
