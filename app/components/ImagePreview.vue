@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TorrentFileEntry } from '~/types/api'
+import { readFileBytesClient } from '~/utils/clientTorrent'
 
 const props = defineProps<{
   infoHash: string
@@ -15,6 +16,20 @@ const status = ref<'loading' | 'ok' | 'err'>('loading')
 const errorText = ref('')
 const src = ref('')
 let objectUrl = ''
+
+const MIME: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  bmp: 'image/bmp',
+  avif: 'image/avif'
+}
+function extOf(p: string): string {
+  const i = p.lastIndexOf('.')
+  return i >= 0 ? p.slice(i + 1).toLowerCase() : ''
+}
 
 const current = computed<TorrentFileEntry | undefined>(() => props.images[props.index])
 const requestUrl = computed(
@@ -37,25 +52,34 @@ async function load() {
   errorText.value = ''
   status.value = 'loading'
   try {
-    const res = await fetch(requestUrl.value)
-    if (!res.ok) {
-      // 服务端用 statusMessage 带上可读原因：没有做种节点 / 图片过大 / 文件不存在
-      const text = await res.text()
-      let message = text
-      try {
-        const json = JSON.parse(text)
-        message = json.statusMessage || json.message || text
-      } catch {
-        /* 不是 JSON 就用原文 */
-      }
-      throw new Error(message || `请求失败（HTTP ${res.status}）`)
-    }
-    objectUrl = URL.createObjectURL(await res.blob())
+    // 优先在用户浏览器里用 WebRTC 从 P2P 网络直接拉取图片字节（不经过 Vercel/Serverless）
+    const bytes = await readFileBytesClient(props.magnet, current.value?.path || '', 25000)
+    const mime = MIME[extOf(current.value?.path || '')] || 'application/octet-stream'
+    objectUrl = URL.createObjectURL(new Blob([bytes], { type: mime }))
     src.value = objectUrl
     status.value = 'ok'
-  } catch (err) {
-    errorText.value = errorMessage(err)
-    status.value = 'err'
+  } catch {
+    // 回退到服务端预览（自托管环境可用；Serverless 上也会失败，此时给出可读错误）
+    try {
+      const res = await fetch(requestUrl.value)
+      if (!res.ok) {
+        const text = await res.text()
+        let message = text
+        try {
+          const json = JSON.parse(text)
+          message = json.statusMessage || json.message || text
+        } catch {
+          /* 不是 JSON 就用原文 */
+        }
+        throw new Error(message || `请求失败（HTTP ${res.status}）`)
+      }
+      objectUrl = URL.createObjectURL(await res.blob())
+      src.value = objectUrl
+      status.value = 'ok'
+    } catch (err) {
+      errorText.value = errorMessage(err)
+      status.value = 'err'
+    }
   }
 }
 

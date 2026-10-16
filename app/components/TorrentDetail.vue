@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TorrentFileEntry, TorrentView } from '~/types/api'
+import { resolveMetadataClient } from '~/utils/clientTorrent'
 
 const props = defineProps<{
   torrent: TorrentView
@@ -49,24 +50,36 @@ const sourceIcon: Record<string, string> = {
   database: '数据库'
 }
 
+function applyResolved(res: { files: TorrentFileEntry[]; size: number; name: string }) {
+  local.value.files = res.files
+  local.value.size = res.size
+  local.value.fileCount = res.files.length
+  local.value.resolveError = null
+  if (res.name) local.value.name = res.name
+  emit('resolved', res)
+}
+
 async function doResolve() {
   resolving.value = true
   try {
+    // 服务端先尝试（缓存服务取清单，自托管还会走 P2P），成功即返回并落库
     const res = await $fetch<{ files: TorrentFileEntry[]; size: number; name: string }>(
       `/api/torrent/${local.value.infoHash}/resolve`,
       { method: 'POST', body: { magnet: local.value.magnet } }
     )
-    local.value.files = res.files
-    local.value.size = res.size
-    local.value.fileCount = res.files.length
-    local.value.resolveError = null
-    if (res.name) local.value.name = res.name
-    emit('resolved', res)
+    applyResolved(res)
     pushToast('ok', '文件清单已解析', `共 ${res.files.length} 个文件 / ${formatBytes(res.size)}`)
-  } catch (err) {
-    const msg = errorMessage(err)
-    local.value.resolveError = msg
-    pushToast('err', '解析失败', msg)
+  } catch {
+    // 服务端无法走 P2P（如 Vercel/Serverless）→ 回退到浏览器端 WebRTC 直接解析
+    try {
+      const meta = await resolveMetadataClient(local.value.magnet, 30000)
+      applyResolved(meta)
+      pushToast('ok', '通过浏览器 P2P 解析文件清单', `共 ${meta.files.length} 个文件 / ${formatBytes(meta.size)}`)
+    } catch (err2) {
+      const msg = errorMessage(err2)
+      local.value.resolveError = msg
+      pushToast('err', '解析失败', msg)
+    }
   } finally {
     resolving.value = false
   }
