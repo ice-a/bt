@@ -1,0 +1,29 @@
+services:
+  app:
+    build: .
+    image: bt-preview:latest
+    container_name: bt-preview
+    ports:
+      - "3000:3000"
+    environment:
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DB: torrent_console
+      SEARCH_PROXY: ""
+      SEARCH_TIMEOUT: "12000"
+      METADATA_TIMEOUT: "30000"
+      APIBAY_BASE: https://apibay.org
+      NYAA_BASE: https://nyaa.si
+      CILISOUSUO_BASE: https://cilisousuo.cc
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    container_name: bt-preview-mongo
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
