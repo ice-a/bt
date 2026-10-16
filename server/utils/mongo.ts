@@ -8,9 +8,6 @@ let indexState: 'pending' | 'done' = 'pending'
 export const mongoUri = () => process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017'
 export const mongoDbName = () => process.env.MONGODB_DB || 'torrent_console'
 
-/** 最近一次连接失败信息，用于在 UI 上提示用户去装 / 启 MongoDB */
-let lastError: { message: string; at: Date } | null = null
-
 export async function getClient(): Promise<MongoClient> {
   if (client) return client
   if (!connecting) {
@@ -25,12 +22,10 @@ export async function getClient(): Promise<MongoClient> {
       .then((cli) => {
         client = cli
         connecting = null
-        lastError = null
         return cli
       })
       .catch((err: unknown) => {
         connecting = null
-        lastError = { message: err instanceof Error ? err.message : String(err), at: new Date() }
         next.close().catch(() => {})
         throw err
       })
@@ -68,24 +63,14 @@ export async function downloadsCol(): Promise<Collection<DownloadDoc>> {
   return (await getDb()).collection<DownloadDoc>('downloads')
 }
 
-/** 把驱动错误里的连接串 / 主机名脱敏，避免泄露凭证与数据库地址 */
-function sanitizeMongoError(raw: string): string {
-  return raw
-    .replace(/mongodb(\+srv)?:\/\/[^\s'"]+/gi, '***')
-    .replace(/[a-z0-9.-]+\.mongodb\.net(?::\d+)?/gi, '***')
-}
-
-/** 供 /api/health 使用：探测 MongoDB 是否可用（不返回任何连接串 / 库名） */
+/** 供 /api/health 使用：探测 MongoDB 是否可用（只返回 ok，不暴露任何连接信息） */
 export async function mongoStatus() {
   try {
     const db = await getDb()
     await db.command({ ping: 1 })
-    return { ok: true, error: null as string | null }
-  } catch (err) {
-    return {
-      ok: false,
-      error: sanitizeMongoError(lastError?.message || (err instanceof Error ? err.message : String(err)))
-    }
+    return { ok: true }
+  } catch {
+    return { ok: false }
   }
 }
 

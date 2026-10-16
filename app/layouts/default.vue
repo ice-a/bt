@@ -45,7 +45,7 @@ const mongoPill = computed(() => {
             <i class="dot" />
             {{ health?.webTorrent ? '磁力解析就绪' : '磁力解析不可用' }}
           </span>
-          <NuxtLink to="/settings" class="pill" :class="mongoPill.cls" :title="health?.mongo.error || ''">
+          <NuxtLink to="/settings" class="pill" :class="mongoPill.cls">
             <i class="dot" />
             {{ mongoPill.text }}
           </NuxtLink>

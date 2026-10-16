@@ -95,7 +95,7 @@ export interface ClientsResponse {
 export interface HealthResponse {
   ok: boolean
   time: string
-  mongo: { ok: boolean; error: string | null }
+  mongo: { ok: boolean }
   webTorrent: boolean
   providers: { id: string; label: string; homepage: string }[]
   enabledProviders: string[]

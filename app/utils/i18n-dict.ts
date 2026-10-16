@@ -225,7 +225,17 @@ export const zh2en: Record<string, string> = {
   '点击关键词直接搜索': 'Click a keyword to search',
   '已写入 MongoDB': 'Saved to MongoDB',
   'MongoDB 未连接，未记录': 'MongoDB not connected, not recorded',
-  'MongoDB 未连接，搜索记录与种子缓存不会被保存（其余功能可用）。在 .env 配置正确的 MONGODB_URI 后刷新即可。': 'MongoDB not connected; search history and torrent cache will not be saved (other features still work). Set a valid MONGODB_URI in .env and refresh.'
+  'MongoDB 未连接，搜索记录与种子缓存不会被保存（其余功能可用）。在 .env 配置正确的 MONGODB_URI 后刷新即可。': 'MongoDB not connected; search history and torrent cache will not be saved (other features still work). Set a valid MONGODB_URI in .env and refresh.',
+
+  // ===== 访问密码门禁 =====
+  '需要密码': 'Password required',
+  '请输入访问密码以进入': 'Enter the access password to continue',
+  '访问密码': 'Access password',
+  '进入': 'Enter',
+  '验证中': 'Verifying…',
+  '密码错误': 'Wrong password',
+  '验证失败': 'Verification failed',
+  '请输入密码': 'Please enter the password'
 }
 
 export const en2zh: Record<string, string> = Object.fromEntries(

@@ -321,7 +321,6 @@ onMounted(load)
           <dt>MongoDB</dt>
           <dd>
             <span :class="health?.mongo.ok ? 'ok' : 'err'">{{ health?.mongo.ok ? '已连接' : '未连接' }}</span>
-            <div v-if="health?.mongo.error" class="small err mono break">{{ health.mongo.error }}</div>
           </dd>
           <dt>磁力解析</dt>
           <dd :class="health?.webTorrent ? 'ok' : 'err'">
