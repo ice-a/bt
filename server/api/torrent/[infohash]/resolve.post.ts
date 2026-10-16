@@ -3,6 +3,9 @@ import { tryMongo } from '../../../utils/mongo'
 import { getTorrent, markResolved } from '../../../utils/store'
 import { fetchMetadataFromMagnet } from '../../../utils/torrent'
 
+// webtorrent 依赖 Node 运行时（需要 dgram / 原生模块），必须显式跑在 nodejs 而非 edge
+export const runtime = 'nodejs'
+
 export default defineEventHandler(async (event) => {
   const infoHash = String(getRouterParam(event, 'infohash') || '').toLowerCase()
   if (!/^[a-f0-9]{40}$/.test(infoHash)) {

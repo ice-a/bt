@@ -170,7 +170,7 @@ export async function loadWebTorrent(): Promise<any> {
     webTorrentMod = mod?.default || mod
     return webTorrentMod
   } catch {
-    throw new Error('未安装 webtorrent 依赖，无法通过磁力链在线获取文件清单（仅能显示 infoHash）')
+    throw new Error('无法在当前运行环境加载 webtorrent（需要支持 UDP 的 Node 运行时；Vercel / 其他 Serverless 通常不可用），仅能显示 infoHash')
   }
 }
 
