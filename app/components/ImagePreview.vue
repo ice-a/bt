@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TorrentFileEntry } from '~/types/api'
-import { readFileBytesClient } from '~/utils/clientTorrent'
+import { formatBytes } from '~/utils/format'
+import { readFileBytesClient, type FileProgress } from '~/utils/clientTorrent'
 
 const props = defineProps<{
   infoHash: string
@@ -15,6 +16,8 @@ const emit = defineEmits<{ close: []; 'update:index': [value: number] }>()
 const status = ref<'loading' | 'ok' | 'err'>('loading')
 const errorText = ref('')
 const src = ref('')
+const progress = ref(0)
+const progressText = ref('')
 let objectUrl = ''
 
 const MIME: Record<string, string> = {
@@ -50,10 +53,18 @@ async function load() {
   revoke()
   src.value = ''
   errorText.value = ''
+  progress.value = 0
+  progressText.value = ''
   status.value = 'loading'
   try {
     // 优先在用户浏览器里用 WebRTC 从 P2P 网络直接拉取图片字节（不经过 Vercel/Serverless）
-    const bytes = await readFileBytesClient(props.magnet, current.value?.path || '', 25000)
+    const bytes = await readFileBytesClient(props.magnet, current.value?.path || '', {
+      timeoutMs: 25000,
+      onProgress: (p: FileProgress) => {
+        progress.value = p.progress
+        progressText.value = p.message
+      }
+    })
     const mime = MIME[extOf(current.value?.path || '')] || 'application/octet-stream'
     objectUrl = URL.createObjectURL(new Blob([bytes], { type: mime }))
     src.value = objectUrl
@@ -119,8 +130,9 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="lightbox-bd">
-        <div v-if="status === 'loading'" class="empty">
-          <span class="spin" /> 正在从做种节点拉取这张图片，取决于对方的上传速度…
+        <div v-if="status === 'loading'" class="empty stack sm">
+          <span class="spin" /> {{ progressText || '正在通过 WebRTC 从做种节点拉取图片…' }}
+          <div v-if="progress > 0" class="bar"><i :style="{ width: (progress * 100).toFixed(0) + '%' }" /></div>
         </div>
         <div v-else-if="status === 'err'" class="stack sm" style="padding: 22px">
           <div class="note err">{{ errorText }}</div>

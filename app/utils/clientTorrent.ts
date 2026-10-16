@@ -57,20 +57,50 @@ function waitForMetadata(torrent: any, timeoutMs: number): Promise<void> {
   })
 }
 
+export interface ResolveProgress {
+  phase: 'connecting' | 'metadata' | 'done'
+  peers: number
+  message: string
+}
+
+export interface FileProgress {
+  progress: number
+  peers: number
+  downloaded: number
+  length: number
+  message: string
+}
+
 export async function resolveMetadataClient(
   magnet: string,
-  timeoutMs = 30000
+  opts: { timeoutMs?: number; onProgress?: (p: ResolveProgress) => void } = {}
 ): Promise<{ name: string; files: { path: string; length: number }[]; size: number }> {
+  const onProgress = opts.onProgress
+  const timeoutMs = opts.timeoutMs ?? 30000
   const WebTorrent = await loadWebTorrent()
   const client = new WebTorrent()
   try {
     const torrent = client.add(withWsTrackers(magnet))
+    const report = (phase: ResolveProgress['phase'], message?: string) => {
+      const peers = torrent.numPeers ?? 0
+      onProgress?.({
+        phase,
+        peers,
+        message:
+          message ??
+          (peers > 0 ? `已连接 ${peers} 个节点，正在获取元数据…` : '正在通过 WebRTC 寻找 P2P 节点…')
+      })
+    }
+    torrent.on('wire', () => report('connecting'))
+    torrent.on('metadata', () => report('metadata', '已拿到元数据，正在整理文件清单…'))
     await waitForMetadata(torrent, timeoutMs)
+    report('metadata', '已拿到元数据，正在整理文件清单…')
     const files = (torrent.files || []).map((f: any) => ({
       path: normPath(String(f.path || f.name || '')),
       length: Number(f.length) || 0
     }))
     if (!files.length) throw new Error('已连上节点，但对方没有返回任何文件信息')
+    onProgress?.({ phase: 'done', peers: torrent.numPeers ?? 0, message: `共 ${files.length} 个文件` })
     return { name: String(torrent.name || ''), files, size: files.reduce((s, f) => s + f.length, 0) }
   } finally {
     try {
@@ -84,8 +114,10 @@ export async function resolveMetadataClient(
 export async function readFileBytesClient(
   magnet: string,
   filePath: string,
-  timeoutMs = 25000
+  opts: { timeoutMs?: number; onProgress?: (p: FileProgress) => void } = {}
 ): Promise<ArrayBuffer> {
+  const onProgress = opts.onProgress
+  const timeoutMs = opts.timeoutMs ?? 25000
   const WebTorrent = await loadWebTorrent()
   const client = new WebTorrent()
   try {
@@ -95,7 +127,31 @@ export async function readFileBytesClient(
       (f: any) => normPath(String(f.path || f.name || '')) === normPath(filePath)
     )
     if (!target) throw new Error('这个种子里没有该文件，文件清单可能已过期')
-    return await target.arrayBuffer()
+
+    const report = () => {
+      const peers = torrent.numPeers ?? 0
+      const progress = Number(target.progress) || 0
+      onProgress?.({
+        progress,
+        peers,
+        downloaded: Number(target.downloaded) || 0,
+        length: Number(target.length) || 0,
+        message:
+          peers > 0 ? `下载中 ${Math.round(progress * 100)}% · ${peers} 个节点` : '正在连接 P2P 节点…'
+      })
+    }
+    torrent.on('wire', report)
+    if (typeof target.on === 'function') target.on('download', report)
+    report()
+    const ab = await target.arrayBuffer()
+    onProgress?.({
+      progress: 1,
+      peers: torrent.numPeers ?? 0,
+      downloaded: Number(target.length) || 0,
+      length: Number(target.length) || 0,
+      message: '完成'
+    })
+    return ab
   } finally {
     try {
       client.destroy()

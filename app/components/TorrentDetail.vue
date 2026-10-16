@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TorrentFileEntry, TorrentView } from '~/types/api'
-import { resolveMetadataClient } from '~/utils/clientTorrent'
+import { resolveMetadataClient, type ResolveProgress } from '~/utils/clientTorrent'
 
 const props = defineProps<{
   torrent: TorrentView
@@ -12,6 +12,7 @@ const emit = defineEmits<{ resolved: [payload: { files: TorrentFileEntry[]; size
 
 const local = ref<TorrentView>({ ...props.torrent })
 const resolving = ref(false)
+const resolveStatus = ref('')
 const showTrackers = ref(false)
 
 watch(
@@ -61,6 +62,7 @@ function applyResolved(res: { files: TorrentFileEntry[]; size: number; name: str
 
 async function doResolve() {
   resolving.value = true
+  resolveStatus.value = ''
   try {
     // 服务端先尝试（缓存服务取清单，自托管还会走 P2P），成功即返回并落库
     const res = await $fetch<{ files: TorrentFileEntry[]; size: number; name: string }>(
@@ -72,7 +74,12 @@ async function doResolve() {
   } catch {
     // 服务端无法走 P2P（如 Vercel/Serverless）→ 回退到浏览器端 WebRTC 直接解析
     try {
-      const meta = await resolveMetadataClient(local.value.magnet, 30000)
+      const meta = await resolveMetadataClient(local.value.magnet, {
+      timeoutMs: 30000,
+      onProgress: (p: ResolveProgress) => {
+        resolveStatus.value = p.message
+      }
+    })
       applyResolved(meta)
       pushToast('ok', '通过浏览器 P2P 解析文件清单', `共 ${meta.files.length} 个文件 / ${formatBytes(meta.size)}`)
     } catch (err2) {
@@ -164,6 +171,8 @@ onMounted(() => {
     <div v-if="previewImages.length" class="note">
       文件清单里有 {{ previewImages.length }} 张图片可以点「预览」直接看：只会按需拉取这几张图所在的分片，不会下载整个种子。
     </div>
+
+    <div v-if="resolving && resolveStatus" class="note warn">{{ resolveStatus }}</div>
 
     <div class="panel">
       <div class="panel-bd tight">
