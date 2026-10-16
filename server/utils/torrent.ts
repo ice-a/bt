@@ -58,6 +58,24 @@ export function withDefaultTrackers(magnet: string, extra: string[] = []): strin
   return magnet + list.map((t) => `&tr=${encodeURIComponent(t)}`).join('')
 }
 
+/** 仅 HTTP/HTTPS/WebSocket 的 tracker（不走 UDP/DHT，Serverless 环境也能出网） */
+export const HTTP_TRACKERS = [
+  'wss://tracker.openwebtorrent.com',
+  'wss://tracker.btorrent.xyz',
+  'http://tracker.opentrackr.org/announce',
+  'http://open.acgnloader.live:8484/announce',
+  'https://tracker.nanocodes.net/announce'
+]
+
+/** 给磁力链补上 HTTP/WS tracker（不补 UDP，避免 DHT） */
+export function withHttpTrackers(magnet: string): string {
+  const existing = new Set(trackersInMagnet(magnet))
+  const add = HTTP_TRACKERS.filter((t) => !existing.has(t))
+  if (!add.length) return magnet
+  const sep = magnet.includes('?') ? '&' : '?'
+  return magnet + sep + add.map((t) => `tr=${encodeURIComponent(t)}`).join('&')
+}
+
 function toInfoHash(value: unknown): string {
   if (!value) return ''
   if (typeof value === 'string') return value.toLowerCase()
@@ -188,55 +206,88 @@ export async function checkWebTorrent(): Promise<boolean> {
   }
 }
 
+function extractInfoHash(magnet: string): string {
+  const m = magnet.match(/xt=urn:btih:([a-z0-9]+)/i)
+  return m ? m[1].toLowerCase() : ''
+}
+
+/** 通过公开的 torrent 缓存服务取 .torrent（纯 HTTPS，无需 P2P，Vercel 等 Serverless 可用） */
+const TORRENT_CACHES: ((ih: string) => string)[] = [
+  (ih) => `https://itorrents.org/torrent/${ih}.torrent`,
+  (ih) => `https://torcache.net/torrent/${ih}.torrent`,
+  (ih) => `https://thetorrent.org/${ih}`,
+  (ih) => `https://btcache.me/torrent/${ih}/download`
+]
+
+async function fetchFromCache(infoHash: string): Promise<{ name: string; files: TorrentFileEntry[]; size: number } | null> {
+  if (!infoHash) return null
+  const results = await Promise.allSettled(
+    TORRENT_CACHES.map(async (fn) => {
+      const res = await fetch(fn(infoHash), { redirect: 'follow', signal: AbortSignal.timeout(8000) })
+      if (!res.ok) throw new Error(`status ${res.status}`)
+      const buf = Buffer.from(await res.arrayBuffer())
+      const info = await parseTorrentBuffer(buf)
+      if (!info.files?.length) throw new Error('no files')
+      return { name: info.name, files: info.files, size: info.size }
+    })
+  )
+  for (const r of results) if (r.status === 'fulfilled') return r.value
+  return null
+}
+
 /**
- * 通过磁力链从 DHT / tracker 拉取种子元数据，从而得到文件清单。
- * 只取元数据，取到后立刻销毁客户端并清理临时目录。
+ * 在线获取种子元数据（文件清单）。
+ * 优先走 torrent 缓存服务（纯 HTTPS，Vercel 等 Serverless 可用，无需 P2P）；
+ * 缓存未命中时再尝试 webtorrent，但关闭 DHT、仅用 http/wss tracker（需支持 TCP/TLS 的 Node 运行时）。
  */
 export async function fetchMetadataFromMagnet(
   magnetUri: string,
   timeoutMs = 30000
 ): Promise<{ name: string; files: TorrentFileEntry[]; size: number }> {
-  const WebTorrent = await loadWebTorrent()
-  const dir = join(tmpdir(), `dsl-meta-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`)
-  await mkdir(dir, { recursive: true })
+  const infoHash = extractInfoHash(magnetUri)
 
-  const client = new WebTorrent({ dht: true, lsd: false, utp: false })
+  // 1) torrent 缓存服务（并发尝试，取第一个成功）
+  const cached = await fetchFromCache(infoHash)
+  if (cached) return cached
+
+  // 2) webtorrent：关闭 DHT，仅 http/wss tracker
   try {
-    // 纯 DHT 很可能找不到节点，没 tracker 的磁力链先补上公共 tracker
-    const torrent = client.add(withDefaultTrackers(magnetUri), { path: dir })
-    torrent.on('warning', () => {})
-
-    await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        reject(new Error(`获取种子元数据超时（${Math.round(timeoutMs / 1000)}s），可能没有可用节点或 tracker 被墙`))
-      }, timeoutMs)
-      const done = (fn: () => void) => {
-        clearTimeout(timer)
-        fn()
-      }
-      if (torrent.metadata) return done(resolve)
-      torrent.on('metadata', () => done(resolve))
-      torrent.on('error', (err: Error) => done(() => reject(err)))
-      client.on('error', (err: Error) => done(() => reject(err)))
-    })
-
-    const files: TorrentFileEntry[] = (torrent.files || []).map((f: any) => ({
-      // Windows 下 webtorrent 用反斜杠拼路径，统一成正斜杠便于展示
-      path: String(f.path || f.name || '').replace(/\\/g, '/'),
-      length: Number(f.length) || 0
-    }))
-    return {
-      name: String(torrent.name || ''),
-      files,
-      size: files.reduce((sum, f) => sum + f.length, 0)
-    }
-  } finally {
+    const WebTorrent = await loadWebTorrent()
+    const dir = join(tmpdir(), `dsl-meta-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`)
+    await mkdir(dir, { recursive: true })
+    const client = new WebTorrent({ dht: false, lsd: false, utp: false })
     try {
-      // webtorrent v3 的 destroy 是回调式 API
-      await new Promise<void>((resolve) => client.destroy(() => resolve()))
-    } catch {
-      /* ignore */
+      const torrent = client.add(withHttpTrackers(magnetUri), { path: dir })
+      torrent.on('warning', () => {})
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          reject(new Error(`获取种子元数据超时（${Math.round(timeoutMs / 1000)}s），可能缺少可用的 HTTP/WS tracker`))
+        }, timeoutMs)
+        const done = (fn: () => void) => {
+          clearTimeout(timer)
+          fn()
+        }
+        if (torrent.metadata) return done(resolve)
+        torrent.on('metadata', () => done(resolve))
+        torrent.on('error', (err: Error) => done(() => reject(err)))
+        client.on('error', (err: Error) => done(() => reject(err)))
+      })
+      const files: TorrentFileEntry[] = (torrent.files || []).map((f: any) => ({
+        path: String(f.path || f.name || '').replace(/\\/g, '/'),
+        length: Number(f.length) || 0
+      }))
+      return { name: String(torrent.name || ''), files, size: files.reduce((sum, f) => sum + f.length, 0) }
+    } finally {
+      try {
+        await new Promise<void>((resolve) => client.destroy(() => resolve()))
+      } catch {
+        /* ignore */
+      }
+      rm(dir, { recursive: true, force: true }).catch(() => {})
     }
-    rm(dir, { recursive: true, force: true }).catch(() => {})
+  } catch {
+    // webtorrent 在当前环境不可用（例如 Vercel 无法加载原生模块），忽略，继续降级
   }
+
+  throw new Error('无法通过在线方式获取种子元数据：缓存服务未命中，且当前环境不支持 webtorrent（DHT 已禁用，仅 HTTP/WS tracker）。仅显示 infoHash')
 }

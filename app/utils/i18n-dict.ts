@@ -10,7 +10,7 @@ export const zh2en: Record<string, string> = {
   '设置': 'Settings',
   'MONGO 未连接': 'MONGO disconnected',
   '磁力解析就绪': 'Magnet parsing ready',
-  '磁力解析不可用': 'Magnet parsing unavailable',
+  '磁力解析（缓存模式）': 'Magnet parsing (cache mode)',
   '本地自托管 · 单进程 Nuxt 单体应用': 'Self-hosted · single-process Nuxt app',
   '种子只做解析与预览，文件内容由你自己的下载器拉取': 'Torrents are only parsed and previewed; file contents are fetched by your own download client',
 
@@ -215,7 +215,7 @@ export const zh2en: Record<string, string> = {
   '已连接': 'Connected',
   '磁力解析': 'Magnet parsing',
   'webtorrent 可用，可通过 DHT/tracker 取文件清单': 'webtorrent available; can fetch file list via DHT/tracker',
-  'webtorrent 不可用，磁力链只能显示 infoHash': 'webtorrent unavailable; magnet links can only show infoHash',
+  'webtorrent 不可用，但通过 torrent 缓存服务在线取清单（不走 DHT）': 'webtorrent unavailable, but online file list via torrent cache (no DHT)',
 
   // ===== 输入框占位符 =====
   '输入片名 / 剧名 / 关键词，回车搜索': 'Movie / show / keyword, press Enter to search',

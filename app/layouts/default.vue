@@ -48,7 +48,7 @@ async function logout() {
         <div class="topbar-right">
           <span class="pill hide-sm" :class="health && !health.webTorrent ? 'warn' : ''">
             <i class="dot" />
-            {{ health?.webTorrent ? '磁力解析就绪' : '磁力解析不可用' }}
+            {{ health?.webTorrent ? '磁力解析就绪' : '磁力解析（缓存模式）' }}
           </span>
           <NuxtLink to="/settings" class="pill" :class="mongoPill.cls">
             <i class="dot" />

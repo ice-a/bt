@@ -323,8 +323,8 @@ onMounted(load)
             <span :class="health?.mongo.ok ? 'ok' : 'err'">{{ health?.mongo.ok ? '已连接' : '未连接' }}</span>
           </dd>
           <dt>磁力解析</dt>
-          <dd :class="health?.webTorrent ? 'ok' : 'err'">
-            {{ health?.webTorrent ? 'webtorrent 可用，可通过 DHT/tracker 取文件清单' : 'webtorrent 不可用，磁力链只能显示 infoHash' }}
+          <dd :class="health?.webTorrent ? 'ok' : 'warn'">
+            {{ health?.webTorrent ? 'webtorrent 可用，可通过 DHT/tracker 取文件清单' : 'webtorrent 不可用，但通过 torrent 缓存服务在线取清单（不走 DHT）' }}
           </dd>
           <dt>搜索源</dt>
           <dd class="mono small">{{ health?.providers?.map((p) => p.label).join(' / ') }}</dd>
