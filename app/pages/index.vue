@@ -6,6 +6,17 @@ type Tab = 'search' | 'file' | 'magnet'
 const route = useRoute()
 const health = useHealth()
 
+/* ---------------- 热搜 3D 词云 ---------------- */
+const { data: hotData, refresh: refreshHot } = await useFetch<{ keywords: { keyword: string; count: number }[] }>('/api/hot', {
+  query: { limit: 10 }
+})
+const hotWords = computed(() => (hotData.value?.keywords || []).map((k) => ({ text: k.keyword, weight: k.count })))
+
+function onHotSelect(kw: string) {
+  if (tab.value !== 'search') tab.value = 'search'
+  doSearch(kw)
+}
+
 const tab = ref<Tab>('search')
 
 /* ---------------- 关键词搜索 ---------------- */
@@ -71,6 +82,7 @@ async function doSearch(term?: string) {
     pushToast('err', '搜索失败', errorMessage(err))
   } finally {
     searching.value = false
+    refreshHot()
   }
 }
 
@@ -141,7 +153,7 @@ function previewLink(item: TorrentView) {
     </section>
 
     <div v-if="health && !health.mongo.ok" class="note warn mt rise rise-2">
-      MongoDB 未连接，搜索记录与种子缓存不会被保存（其余功能可用）。启动本地 MongoDB 后刷新即可：
+      MongoDB 未连接，搜索记录与种子缓存不会被保存（其余功能可用）。在 .env 配置正确的 MONGODB_URI（云端实例请填真实密码）后刷新即可：
       <span class="mono">{{ health.mongo.uri }}</span>
     </div>
 
@@ -176,6 +188,10 @@ function previewLink(item: TorrentView) {
           </div>
         </div>
       </form>
+
+      <ClientOnly>
+        <KeywordCloud3D v-if="hotWords.length" :words="hotWords" @select="onHotSelect" />
+      </ClientOnly>
 
       <div v-if="response" class="row wrap small">
         <span class="mono dim">

@@ -219,7 +219,13 @@ export const zh2en: Record<string, string> = {
 
   // ===== 输入框占位符 =====
   '输入片名 / 剧名 / 关键词，回车搜索': 'Movie / show / keyword, press Enter to search',
-  'http://127.0.0.1:7890 / 留空直连': 'http://127.0.0.1:7890 / blank for direct'
+  'http://127.0.0.1:7890 / 留空直连': 'http://127.0.0.1:7890 / blank for direct',
+
+  // ===== 热词云 / 搜索页提示 =====
+  '点击关键词直接搜索': 'Click a keyword to search',
+  '已写入 MongoDB': 'Saved to MongoDB',
+  'MongoDB 未连接，未记录': 'MongoDB not connected, not recorded',
+  'MongoDB 未连接，搜索记录与种子缓存不会被保存（其余功能可用）。在 .env 配置正确的 MONGODB_URI（云端实例请填真实密码）后刷新即可：': 'MongoDB not connected; search history and torrent cache will not be saved (other features still work). Set a valid MONGODB_URI in .env (use the real password for cloud instances) and refresh:'
 }
 
 export const en2zh: Record<string, string> = Object.fromEntries(
