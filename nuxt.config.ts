@@ -1,5 +1,3 @@
-import nodePolyfills from 'vite-plugin-node-polyfills'
-
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: false },
@@ -29,12 +27,6 @@ export default defineNuxtConfig({
     }
   },
   vite: {
-    plugins: [
-      nodePolyfills({
-        globals: { Buffer: true, global: true, process: true },
-        protocolImports: true
-      })
-    ],
     server: {
       fs: { strict: false }
     }

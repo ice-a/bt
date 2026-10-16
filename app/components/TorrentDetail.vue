@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TorrentFileEntry, TorrentView } from '~/types/api'
+import { translateText } from '~/utils/i18n'
 import { resolveMetadataClient, type ResolveProgress } from '~/utils/clientTorrent'
 
 const props = defineProps<{
@@ -60,6 +61,16 @@ function applyResolved(res: { files: TorrentFileEntry[]; size: number; name: str
   emit('resolved', res)
 }
 
+function resolveStatusText(p: ResolveProgress): string {
+  if (p.phase === 'connecting') {
+    return p.peers > 0
+      ? `${translateText('已连接')} ${p.peers} ${translateText('个节点，正在获取元数据…')}`
+      : translateText('正在通过 WebRTC 寻找 P2P 节点…')
+  }
+  if (p.phase === 'metadata') return translateText('已拿到元数据，正在整理文件清单…')
+  return `${translateText('共')} ${p.peers} ${translateText('个节点')}`
+}
+
 async function doResolve() {
   resolving.value = true
   resolveStatus.value = ''
@@ -77,7 +88,7 @@ async function doResolve() {
       const meta = await resolveMetadataClient(local.value.magnet, {
       timeoutMs: 30000,
       onProgress: (p: ResolveProgress) => {
-        resolveStatus.value = p.message
+        resolveStatus.value = resolveStatusText(p)
       }
     })
       applyResolved(meta)

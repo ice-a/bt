@@ -28,13 +28,59 @@ function withWsTrackers(magnet: string): string {
   return magnet + sep + add.map((t) => `tr=${encodeURIComponent(t)}`).join('&')
 }
 
+// 浏览器端 WebTorrent 以 CDN 的 UMD 包形式按需加载（避免把 webtorrent 打进 Vite 客户端，
+// 同时绕开 Vite 8 与 node-polyfills 的 peer 依赖冲突）。优先 jsDelivr，失败再试 unpkg。
+const WT_CDN_URLS = [
+  'https://cdn.jsdelivr.net/npm/webtorrent@3.0.21/dist/webtorrent.min.js',
+  'https://unpkg.com/webtorrent@3.0.21/dist/webtorrent.min.js'
+]
+
 let wtPromise: Promise<any> | null = null
 function loadWebTorrent(): Promise<any> {
   if (!wtPromise) {
-    // 仅在浏览器运行时按需加载，Vite 会将其单独拆包；服务端不会执行到此处
-    wtPromise = import('webtorrent').then((m) => (m as any).default || m)
+    wtPromise = new Promise((resolve, reject) => {
+      if (typeof window === 'undefined') {
+        reject(new Error('WebTorrent 只能在浏览器中运行'))
+        return
+      }
+      const existing = (window as any).WebTorrent
+      if (existing) {
+        resolve(existing)
+        return
+      }
+      const tryLoad = (i: number) => {
+        if (i >= WT_CDN_URLS.length) {
+          reject(new Error('无法从 CDN 加载 WebTorrent（可能被网络或 CSP 拦截）'))
+          return
+        }
+        const script = document.createElement('script')
+        script.src = WT_CDN_URLS[i]
+        script.async = true
+        script.onload = () => {
+          const WT = (window as any).WebTorrent
+          if (WT) resolve(WT)
+          else tryLoad(i + 1)
+        }
+        script.onerror = () => tryLoad(i + 1)
+        document.head.appendChild(script)
+      }
+      tryLoad(0)
+    })
   }
   return wtPromise
+}
+
+// 当前活跃的浏览器 P2P 会话数，用于顶栏指示
+import { ref } from 'vue'
+export const p2pActive = ref(false)
+let activeSessions = 0
+function enterSession() {
+  activeSessions++
+  p2pActive.value = activeSessions > 0
+}
+function leaveSession() {
+  activeSessions = Math.max(0, activeSessions - 1)
+  p2pActive.value = activeSessions > 0
 }
 
 function waitForMetadata(torrent: any, timeoutMs: number): Promise<void> {
@@ -79,6 +125,7 @@ export async function resolveMetadataClient(
   const timeoutMs = opts.timeoutMs ?? 30000
   const WebTorrent = await loadWebTorrent()
   const client = new WebTorrent()
+  enterSession()
   try {
     const torrent = client.add(withWsTrackers(magnet))
     const report = (phase: ResolveProgress['phase'], message?: string) => {
@@ -103,6 +150,7 @@ export async function resolveMetadataClient(
     onProgress?.({ phase: 'done', peers: torrent.numPeers ?? 0, message: `共 ${files.length} 个文件` })
     return { name: String(torrent.name || ''), files, size: files.reduce((s, f) => s + f.length, 0) }
   } finally {
+    leaveSession()
     try {
       client.destroy()
     } catch {
@@ -120,6 +168,7 @@ export async function readFileBytesClient(
   const timeoutMs = opts.timeoutMs ?? 25000
   const WebTorrent = await loadWebTorrent()
   const client = new WebTorrent()
+  enterSession()
   try {
     const torrent = client.add(withWsTrackers(magnet))
     await waitForMetadata(torrent, timeoutMs)
@@ -153,6 +202,7 @@ export async function readFileBytesClient(
     })
     return ab
   } finally {
+    leaveSession()
     try {
       client.destroy()
     } catch {

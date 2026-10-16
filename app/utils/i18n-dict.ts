@@ -11,6 +11,21 @@ export const zh2en: Record<string, string> = {
   'MONGO 未连接': 'MONGO disconnected',
   '磁力解析就绪': 'Magnet parsing ready',
   '磁力解析（缓存模式）': 'Magnet parsing (cache mode)',
+
+  // ===== 浏览器端 P2P 进度文案 =====
+  'P2P 活动中': 'P2P active',
+  'P2P 空闲': 'P2P idle',
+  '已连接': 'Connected',
+  '个节点，正在获取元数据…': ' peers, fetching metadata…',
+  '正在通过 WebRTC 寻找 P2P 节点…': 'Looking for P2P nodes via WebRTC…',
+  '已拿到元数据，正在整理文件清单…': 'Metadata received, listing files…',
+  '共': 'Total',
+  '个节点': ' peers',
+  '个文件': ' files',
+  '下载中': 'Downloading',
+  '正在连接 P2P 节点…': 'Connecting to P2P nodes…',
+  '正在通过 WebRTC 从做种节点拉取图片…': 'Fetching image from seeders via WebRTC…',
+  '完成': 'Done',
   '本地自托管 · 单进程 Nuxt 单体应用': 'Self-hosted · single-process Nuxt app',
   '种子只做解析与预览，文件内容由你自己的下载器拉取': 'Torrents are only parsed and previewed; file contents are fetched by your own download client',
 

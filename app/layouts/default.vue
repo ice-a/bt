@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { locale, setLocale, type Locale } from '~/utils/i18n'
+import { locale, setLocale, translateText, type Locale } from '~/utils/i18n'
+import { p2pActive } from '~/utils/clientTorrent'
 
 const route = useRoute()
 const health = useHealth()
@@ -49,6 +50,10 @@ async function logout() {
           <span class="pill hide-sm" :class="health && !health.webTorrent ? 'warn' : ''">
             <i class="dot" />
             {{ health?.webTorrent ? '磁力解析就绪' : '磁力解析（缓存模式）' }}
+          </span>
+          <span class="pill hide-sm" :class="p2pActive ? 'on' : 'dim'">
+            <i class="dot" />
+            {{ p2pActive ? translateText('P2P 活动中') : translateText('P2P 空闲') }}
           </span>
           <NuxtLink to="/settings" class="pill" :class="mongoPill.cls">
             <i class="dot" />

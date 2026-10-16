@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TorrentFileEntry } from '~/types/api'
 import { formatBytes } from '~/utils/format'
+import { translateText } from '~/utils/i18n'
 import { readFileBytesClient, type FileProgress } from '~/utils/clientTorrent'
 
 const props = defineProps<{
@@ -62,7 +63,9 @@ async function load() {
       timeoutMs: 25000,
       onProgress: (p: FileProgress) => {
         progress.value = p.progress
-        progressText.value = p.message
+        progressText.value = p.peers > 0
+          ? `${translateText('下载中')} ${Math.round(p.progress * 100)}% · ${p.peers} ${translateText('个节点')}`
+          : translateText('正在连接 P2P 节点…')
       }
     })
     const mime = MIME[extOf(current.value?.path || '')] || 'application/octet-stream'
