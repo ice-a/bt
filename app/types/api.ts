@@ -46,52 +46,6 @@ export interface SearchResponse {
   stored: boolean
 }
 
-export interface ClientStatus {
-  id: string
-  type: string
-  name: string
-  label: string
-  endpoint: string
-  online: boolean
-  version?: string
-  error?: string
-}
-
-export interface BtClientConfig {
-  id: string
-  type: 'qbittorrent' | 'transmission' | 'aria2'
-  name: string
-  host: string
-  port: number
-  path?: string
-  username?: string
-  password?: string
-  downloadDir?: string
-  useHttps?: boolean
-  enabled?: boolean
-}
-
-export interface ClientAdapterMeta {
-  type: string
-  label: string
-  defaultPort: number
-  defaultPath: string | null
-}
-
-export interface ClientsResponse {
-  adapters: ClientAdapterMeta[]
-  configs: BtClientConfig[]
-  statuses: ClientStatus[]
-  online: number
-  total: number
-  settings: {
-    searchProxy: string
-    searchTimeout: number
-    metadataTimeout: number
-    enabledProviders: string[]
-  }
-}
-
 export interface HealthResponse {
   ok: boolean
   time: string
@@ -100,6 +54,5 @@ export interface HealthResponse {
   providers: { id: string; label: string; homepage: string }[]
   enabledProviders: string[]
   searchProxy: string
-  clients: { id: string; type: string; name: string; endpoint: string; enabled: boolean }[]
   authed: boolean
 }

@@ -35,13 +35,12 @@ async function logout() {
           <span class="brand-mark">BT</span>
           <span>
             <span class="brand-name">Torrent Console</span><br />
-            <span class="brand-sub">预览台 / 投递器</span>
+            <span class="brand-sub">BT 种子预览台</span>
           </span>
         </NuxtLink>
 
         <nav class="nav">
           <NuxtLink to="/" :class="{ active: route.path === '/' }">搜索</NuxtLink>
-          <NuxtLink to="/downloads" :class="{ active: route.path === '/downloads' }">任务</NuxtLink>
           <NuxtLink to="/history" :class="{ active: route.path === '/history' }">历史</NuxtLink>
           <NuxtLink to="/settings" :class="{ active: route.path === '/settings' }">设置</NuxtLink>
         </nav>
@@ -75,7 +74,7 @@ async function logout() {
     <footer class="footer">
       <div class="wrap spread">
         <span>本地自托管 · 单进程 Nuxt 单体应用</span>
-        <span class="mute">种子只做解析与预览，文件内容由你自己的下载器拉取</span>
+        <span class="mute">只做解析与预览，直接获取磁力链</span>
       </div>
     </footer>
   </div>

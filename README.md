@@ -1,6 +1,6 @@
 # BT 种子预览台（DSL）
 
-搜索 / 解析 / 预览 BT 种子内容，并一键投递到本机下载工具（qBittorrent / Transmission / aria2）的 Web 控制台。
+搜索 / 解析 / 预览 BT 种子内容，并直接获取磁力链交给你的下载工具。本应用**只做解析与预览，不负责实际下载**（不内置任何 BT 客户端投递功能）。
 
 ## 功能特性
 
@@ -9,14 +9,14 @@
   - Nyaa
   - SolidTorrents
   - 磁力搜索（cilisousuo.cc）
-- **种子内容预览**：通过 WebTorrent 的 DHT / Tracker 解析磁力链，取得文件清单、总大小、做种/下载人数（无需真正下载文件）。
-- **一键投递**：把选中的磁力链直接发给本机 BT 客户端开始下载，并记录投递历史。
-- **可配置**：搜索代理、超时、启用哪些搜索源、BT 客户端地址都可在「设置」页或 `.env` 中调整。
+- **种子内容预览**：通过 WebTorrent 的 DHT / Tracker 解析磁力链，取得文件清单、总大小、做种/下载人数（无需真正下载文件）；支持按需拉取图片分片做在线预览。
+- **获取磁力链**：解析完成后直接复制磁力链，交给任意下载工具即可。
+- **可配置**：搜索代理、超时、启用哪些搜索源都可在「设置」页或 `.env` 中调整。
 
 ## 技术栈
 
 - 前端/全栈：[Nuxt 4](https://nuxt.com/)（Vue 3 + Nitro 服务端）
-- 数据库：[MongoDB](https://www.mongodb.com/)（搜索历史、投递记录、配置持久化；不连库时回落到 `.env` 默认值）
+- 数据库：[MongoDB](https://www.mongodb.com/)（搜索历史、解析缓存、配置持久化；不连库时回落到 `.env` 默认值）
 - 关键依赖：`webtorrent`（种子解析）、`mongodb`、`parse-torrent`、`undici`（带代理的 fetch）、`fast-xml-parser`
 
 ## 环境要求
@@ -141,7 +141,7 @@ server {
 ```
 app/            前端页面与组件（Nuxt pages / components / composables）
 server/
-  api/         Nitro 接口（search / torrent / clients / history / downloads ...）
+  api/         Nitro 接口（search / torrent / history / settings ...）
   utils/
     search/    各搜索源实现（apibay / nyaa / solidtorrents / cilisousuo）
     mongo.ts   MongoDB 连接与索引

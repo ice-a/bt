@@ -1,7 +1,7 @@
-import { downloadsCol, searchesCol, torrentsCol } from './mongo'
+import { searchesCol, torrentsCol } from './mongo'
 import type { SearchResult } from './search/types'
 import type { TorrentInfo } from './torrent'
-import type { DownloadDoc, SearchDoc, TorrentDoc } from './types'
+import type { SearchDoc, TorrentDoc } from './types'
 
 function trackersFromMagnet(magnet: string): string[] {
   const out: string[] = []
@@ -149,9 +149,4 @@ export async function markResolved(
     if (data.name) update.name = data.name
   }
   await col.updateOne({ infoHash }, { $set: update })
-}
-
-export async function recordDownload(doc: Omit<DownloadDoc, 'createdAt'>) {
-  const col = await downloadsCol()
-  await col.insertOne({ ...doc, createdAt: new Date() })
 }

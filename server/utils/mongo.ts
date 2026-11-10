@@ -1,5 +1,5 @@
 import { MongoClient, type Collection, type Db } from 'mongodb'
-import type { DownloadDoc, SearchDoc, TorrentDoc } from './types'
+import type { SearchDoc, TorrentDoc } from './types'
 
 let client: MongoClient | null = null
 let connecting: Promise<MongoClient> | null = null
@@ -48,7 +48,6 @@ async function ensureIndexes(db: Db) {
   await db.collection<TorrentDoc>('torrents').createIndex({ updatedAt: -1 })
   await db.collection<SearchDoc>('searches').createIndex({ createdAt: -1 })
   await db.collection<SearchDoc>('searches').createIndex({ keyword: 1 })
-  await db.collection<DownloadDoc>('downloads').createIndex({ createdAt: -1 })
 }
 
 export async function torrentsCol(): Promise<Collection<TorrentDoc>> {
@@ -57,10 +56,6 @@ export async function torrentsCol(): Promise<Collection<TorrentDoc>> {
 
 export async function searchesCol(): Promise<Collection<SearchDoc>> {
   return (await getDb()).collection<SearchDoc>('searches')
-}
-
-export async function downloadsCol(): Promise<Collection<DownloadDoc>> {
-  return (await getDb()).collection<DownloadDoc>('downloads')
 }
 
 /** 供 /api/health 使用：探测 MongoDB 是否可用（只返回 ok，不暴露任何连接信息） */

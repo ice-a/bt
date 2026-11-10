@@ -144,11 +144,11 @@ function previewLink(item: TorrentView) {
 <template>
   <div class="page">
     <section class="rise">
-      <p class="label">SEARCH · PARSE · HANDOFF</p>
-      <h1>搜种子、看清里面有什么，再丢给本机下载器</h1>
+      <p class="label">SEARCH · PARSE · PREVIEW</p>
+      <h1>搜种子、解析文件清单、预览内容，并拿到磁力链</h1>
       <p class="sub">
-        搜索走公开磁力源，预览只看文件清单（不下服务器），确认后把种子投递给本机的
-        qBittorrent / Transmission / aria2，由它们完成实际下载。
+        搜索走公开磁力源，解析与预览只拉取文件清单和需要的分片（不下完整文件）。
+        确认后直接复制磁力链，交给你的下载工具即可。
       </p>
     </section>
 

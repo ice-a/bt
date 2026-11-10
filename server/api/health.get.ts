@@ -13,7 +13,6 @@ export default defineEventHandler(async (event) => {
     providers: listProviders(),
     enabledProviders: settings.enabledProviders,
     searchProxy: settings.searchProxy ? '已配置' : '未配置',
-    clients: settings.btClients.map((c) => ({ id: c.id, type: c.type, name: c.name, endpoint: `${c.host}:${c.port}`, enabled: c.enabled !== false })),
     authed: getCookie(event, 'web_unlock') === '1'
   }
 })

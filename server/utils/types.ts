@@ -40,16 +40,3 @@ export interface SearchDoc {
   error: string | null
   createdAt: Date
 }
-
-/** downloads 集合：投递到本机 BT 客户端的记录 */
-export interface DownloadDoc {
-  infoHash: string | null
-  name: string
-  clientId: string
-  clientType: string
-  clientName: string
-  downloadDir: string | null
-  ok: boolean
-  message: string
-  createdAt: Date
-}

@@ -177,8 +177,6 @@ onMounted(() => {
       </div>
     </div>
 
-    <SendPanel :torrent="local" />
-
     <div v-if="previewImages.length" class="note">
       文件清单里有 {{ previewImages.length }} 张图片可以点「预览」直接看：只会按需拉取这几张图所在的分片，不会下载整个种子。
     </div>
