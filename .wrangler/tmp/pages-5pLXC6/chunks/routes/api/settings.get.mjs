@@ -1,0 +1,2 @@
+import{d as o}from"../../_/nitro.mjs";import{l as e}from"../../_/appconfig.mjs";import"node:buffer";import"node:timers";import"node:events";import"node:process";import"cloudflare:workers";import"../../_/mongo.mjs";const r=o(async()=>{const o=await e();return{settings:{searchProxy:o.searchProxy,searchTimeout:o.searchTimeout,metadataTimeout:o.metadataTimeout,enabledProviders:o.enabledProviders}}});export{r as default};
+//# sourceMappingURL=settings.get.mjs.map

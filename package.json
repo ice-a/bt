@@ -4,9 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "nuxt dev",
-    "build": "nuxt build",
+    "build": "node scripts/copy-webtorrent.mjs && nuxt build",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "node scripts/copy-webtorrent.mjs && nuxt prepare"
   },
   "dependencies": {
     "fast-xml-parser": "^4.5.1",

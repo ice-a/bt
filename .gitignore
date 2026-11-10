@@ -7,3 +7,6 @@ dist
 .env.local
 *.log
 .DS_Store
+
+# 由 scripts/copy-webtorrent.mjs 从依赖拷出的同源 UMD 包（构建时生成，不入库）
+public/webtorrent.min.js

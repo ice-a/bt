@@ -1,0 +1,2 @@
+const a=[".gate[data-v-2239ef46]{justify-content:center;align-items:center;min-height:70vh;display:flex}.gate-card[data-v-2239ef46]{border:1px solid var(--line);background:var(--panel);text-align:center;border-radius:16px;flex-direction:column;gap:12px;width:320px;max-width:90vw;padding:28px 24px;display:flex}.brand-mark.big[data-v-2239ef46]{width:56px;height:56px;margin:0 auto;font-size:22px}.gate-card input[data-v-2239ef46]{text-align:center}"];export{a as default};
+//# sourceMappingURL=gate-styles.BbCzyUeR.mjs.map

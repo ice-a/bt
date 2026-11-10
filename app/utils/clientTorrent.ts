@@ -28,9 +28,13 @@ function withWsTrackers(magnet: string): string {
   return magnet + sep + add.map((t) => `tr=${encodeURIComponent(t)}`).join('&')
 }
 
-// 浏览器端 WebTorrent 以 CDN 的 UMD 包形式按需加载（避免把 webtorrent 打进 Vite 客户端，
-// 同时绕开 Vite 8 与 node-polyfills 的 peer 依赖冲突）。优先 jsDelivr，失败再试 unpkg。
+// 浏览器端 WebTorrent 以 UMD 包形式按需加载（避免把 webtorrent 打进 Vite 客户端，
+// 同时绕开 Vite 8 与 node-polyfills 的 peer 依赖冲突）。
+// 优先用同源提供的副本（public/webtorrent.min.js，由构建脚本从依赖拷出），
+// 不依赖任何外部 CDN，避免国内网络 / CSP 拦截。外部 CDN 仅作兜底。
 const WT_CDN_URLS = [
+  '/webtorrent.min.js',
+  'https://registry.npmmirror.com/webtorrent/3.0.21/files/dist/webtorrent.min.js',
   'https://cdn.jsdelivr.net/npm/webtorrent@3.0.21/dist/webtorrent.min.js',
   'https://unpkg.com/webtorrent@3.0.21/dist/webtorrent.min.js'
 ]
