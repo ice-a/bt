@@ -1,6 +1,3 @@
-import { mkdir, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
 import { loadWebTorrent, withDefaultTrackers } from './torrent'
 
 /** 会话空闲多久后释放（毫秒） */
@@ -46,6 +43,9 @@ function touchSession(key: string, session: SwarmSession) {
 
 async function createSession(infoHash: string, magnet: string, timeoutMs: number): Promise<SwarmSession> {
   const WebTorrent = await loadWebTorrent()
+  const { mkdir } = await import('node:fs/promises')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
   const dir = join(tmpdir(), `dsl-swarm-${infoHash.slice(0, 8)}-${Date.now().toString(36)}`)
   await mkdir(dir, { recursive: true })
 

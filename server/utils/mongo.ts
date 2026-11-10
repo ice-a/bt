@@ -1,8 +1,11 @@
-import { MongoClient, type Collection, type Db } from 'mongodb'
+import type { Collection, Db, MongoClient } from 'mongodb'
 import type { SearchDoc, TorrentDoc } from './types'
 
+// mongodb 是按需动态加载的：Cloudflare Workers 等非 Node 环境没有 TCP，也不提供该包，
+// 一旦尝试连接必然失败；这里做成懒加载 + 失败缓存，避免每次请求都卡 10 秒去连库。
 let client: MongoClient | null = null
 let connecting: Promise<MongoClient> | null = null
+let unavailableUntil = 0
 let indexState: 'pending' | 'done' = 'pending'
 
 export const mongoUri = () => process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017'
@@ -10,25 +13,32 @@ export const mongoDbName = () => process.env.MONGODB_DB || 'torrent_console'
 
 export async function getClient(): Promise<MongoClient> {
   if (client) return client
+  if (Date.now() < unavailableUntil) {
+    throw new Error('MongoDB 当前不可用（已缓存失败状态，稍后重试）')
+  }
   if (!connecting) {
-    const next = new MongoClient(mongoUri(), {
-      serverSelectionTimeoutMS: 10000,
-      connectTimeoutMS: 20000,
-      socketTimeoutMS: 30000,
-      retryWrites: true
-    })
-    connecting = next
-      .connect()
-      .then((cli) => {
-        client = cli
-        connecting = null
-        return cli
+    connecting = (async () => {
+      const { MongoClient } = await import('mongodb')
+      const next = new MongoClient(mongoUri(), {
+        serverSelectionTimeoutMS: 10000,
+        connectTimeoutMS: 20000,
+        socketTimeoutMS: 30000,
+        retryWrites: true
       })
-      .catch((err: unknown) => {
-        connecting = null
+      try {
+        const cli = await next.connect()
+        client = cli
+        return cli
+      } catch (err: unknown) {
+        // 连接失败（如 Cloudflare 上无 TCP、或本地没起 MongoDB）：缓存一小段时间的失败状态，
+        // 避免后续每个 DB 操作都重新尝试连接造成卡顿。
+        unavailableUntil = Date.now() + 60_000
         next.close().catch(() => {})
         throw err
-      })
+      } finally {
+        connecting = null
+      }
+    })()
   }
   return connecting
 }

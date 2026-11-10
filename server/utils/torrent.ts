@@ -1,6 +1,3 @@
-import { mkdir, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
 import parseTorrent, { toMagnetURI } from 'parse-torrent'
 import type { TorrentFileEntry } from './types'
 
@@ -250,9 +247,13 @@ export async function fetchMetadataFromMagnet(
   const cached = await fetchFromCache(infoHash)
   if (cached) return cached
 
-  // 2) webtorrent：关闭 DHT，仅 http/wss tracker
+  // 2) webtorrent：关闭 DHT，仅 http/wss tracker（需支持 TCP/TLS 的 Node 运行时）
+  // node:fs / node:os / node:path 只在真正的 Node 运行时用到，按需加载避免污染 Serverless 环境
   try {
     const WebTorrent = await loadWebTorrent()
+    const { mkdir, rm } = await import('node:fs/promises')
+    const { tmpdir } = await import('node:os')
+    const { join } = await import('node:path')
     const dir = join(tmpdir(), `dsl-meta-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`)
     await mkdir(dir, { recursive: true })
     const client = new WebTorrent({ dht: false, lsd: false, utp: false })

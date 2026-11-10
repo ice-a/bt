@@ -21,10 +21,24 @@ export default defineNuxtConfig({
     }
   },
   nitro: {
-    // 这些包体积大且带有原生/动态依赖，必须保持外部化，不能被打包进 Nitro 产物
+    // 构建目标：本地 / Docker 走默认 Node 服务；部署到 Cloudflare 时用
+    //   NITRO_PRESET=cloudflare_pages npm run build
+    // 来切换。Cloudflare Serverless 没有 TCP / 原生模块，webtorrent / mongodb / undici
+    // 都改成运行时按需加载（见 server/utils 下对应模块），缺失即降级。
+    preset: process.env.NITRO_PRESET || undefined,
+    // Node 部署：保持外部化，避免打进产物。
+    // Cloudflare 部署：把无法运行的包别名到桩文件，动态 import 失败时由调用方捕获降级。
     externals: {
-      external: ['webtorrent', 'mongodb', 'parse-torrent', 'undici']
-    }
+      external: process.env.NITRO_PRESET === 'cloudflare_pages' ? [] : ['webtorrent', 'mongodb', 'parse-torrent', 'undici']
+    },
+    alias:
+      process.env.NITRO_PRESET === 'cloudflare_pages'
+        ? {
+            mongodb: './stubs/mongodb.mjs',
+            undici: './stubs/undici.mjs',
+            webtorrent: './stubs/webtorrent.mjs'
+          }
+        : {}
   },
   vite: {
     server: {

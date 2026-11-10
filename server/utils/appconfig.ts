@@ -46,16 +46,22 @@ export async function loadSettings(): Promise<AppSettings> {
 }
 
 export async function saveSettings(patch: Partial<AppSettings>): Promise<AppSettings> {
-  const db = await getDb()
   const current = await loadSettings()
   const next: AppSettings = { ...current, ...patch }
-  await db
-    .collection('settings')
-    .updateOne(
-      { _id: SETTINGS_ID as never },
-      { $set: { value: next, updatedAt: new Date() } },
-      { upsert: true }
-    )
+  // MongoDB 不可用时（如 Cloudflare 等无 TCP 的 Serverless 环境）不持久化，
+  // 仅更新内存缓存，保证设置页“保存”不报错；重启后回落到 .env 默认值。
+  try {
+    const db = await getDb()
+    await db
+      .collection('settings')
+      .updateOne(
+        { _id: SETTINGS_ID as never },
+        { $set: { value: next, updatedAt: new Date() } },
+        { upsert: true }
+      )
+  } catch {
+    console.warn('[mongo] 配置未持久化（MongoDB 不可用），仅本次运行内生效')
+  }
   cache = { value: next, at: Date.now(), ttl: 5000 }
   return next
 }

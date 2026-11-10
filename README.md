@@ -130,6 +130,31 @@ server {
 }
 ```
 
+### 方式四：Cloudflare Pages（Serverless，功能降级）
+
+Cloudflare 的 Serverless 运行时（Workers / Pages Functions）**不支持 TCP 与原生模块**，因此本项目服务端依赖的 `mongodb`（TCP）、`undici` 代理（TCP）、`webtorrent`（UDP/原生）在 Cloudflare 上无法运行。部署后会**自动降级**：
+
+- 搜索 / 解析磁力链（`parse-torrent`）/ 文件清单与图片预览（torrent 缓存服务 + 浏览器端 P2P）仍然可用；
+- 不连接数据库，配置与历史不持久化（重启后回落到 `.env` 默认值），需要持久化的功能会降级。
+
+构建与部署：
+
+```bash
+# 用 Cloudflare preset 构建，产物输出到 dist/
+NITRO_PRESET=cloudflare_pages npm run build
+
+# 部署（需已安装 wrangler 并登录：npm i -g wrangler && wrangler login）
+npx wrangler pages deploy dist
+```
+
+环境变量（与 `.env` 里的同名变量）在 Cloudflare 上通过以下任一方式注入，运行时由 `process.env` 读取：
+
+- 控制台：Pages → Settings → Environment variables；
+- 命令行：`npx wrangler pages secret put SEARCH_PROXY`（敏感值用 secret，不要写进 `wrangler.toml` 提交仓库）；
+- 或直接在 `wrangler.toml` 的 `[vars]` 中填写（仓库已附模板，注意不要把密码提交）。
+
+`wrangler.toml` 已附带 `nodejs_compat` 兼容标志与变量模板；`mongodb` / `undici` / `webtorrent` 在 Cloudflare 构建时被别名到桩文件，运行时缺失即由调用方捕获并降级。
+
 ## 常见问题
 
 - **搜索源"打不开" / 搜不到结果**：公开磁力站在部分网络下被墙。在「设置」里填一个可用的 HTTP 代理（`SEARCH_PROXY`），保存后重试。

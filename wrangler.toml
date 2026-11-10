@@ -1,0 +1,20 @@
+name = "bt-preview"
+compatibility_date = "2025-07-15"
+compatibility_flags = ["nodejs_compat"]
+
+# Cloudflare Pages：Nitro 的 cloudflare_pages preset 把产物输出到 dist/
+pages_build_output_dir = "dist"
+
+# 运行时环境变量（也可在 Cloudflare 控制台的 Pages → Settings → Environment variables 里配置）。
+# 这些变量在 Cloudflare 上以「明文环境变量」形式注入；敏感值（如 MONGODB_URI）建议用
+#   npx wrangler pages secret put MONGODB_URI
+# 设置为加密 Secret，不要写进此文件提交到仓库。
+[vars]
+SEARCH_PROXY = ""
+SEARCH_TIMEOUT = "12000"
+METADATA_TIMEOUT = "30000"
+APIBAY_BASE = ""
+NYAA_BASE = ""
+CILISOUSUO_BASE = ""
+# WEBPASSWORD = "改成你的访问密码"
+# MONGODB_URI = "mongodb+srv://user:pass@cluster...（留空则不持久化，功能降级）"
