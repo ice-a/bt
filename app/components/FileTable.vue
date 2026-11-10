@@ -74,7 +74,15 @@ const truncated = computed(() => (props.files?.length || 0) > 500)
           <tbody>
             <tr v-for="(f, i) in visible" :key="i">
               <td class="file-path">
-                <span class="file-dir">{{ splitPath(f.path).dir }}</span><span class="file-name">{{ splitPath(f.path).name }}</span>
+                <span class="file-dir">{{ splitPath(f.path).dir }}</span>
+                <button
+                  v-if="previewable(f)"
+                  type="button"
+                  class="file-name link"
+                  :title="`点击预览这张图片：${f.path}`"
+                  @click="emit('preview', f)"
+                >{{ splitPath(f.path).name }}</button>
+                <span v-else class="file-name">{{ splitPath(f.path).name }}</span>
               </td>
               <td class="num right">{{ formatBytes(f.length) }}</td>
               <td class="num right mute">{{ filePercent(f.length, total) }}</td>
