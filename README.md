@@ -137,21 +137,45 @@ Cloudflare 的 Serverless 运行时（Workers / Pages Functions）**不支持 TC
 - 搜索 / 解析磁力链（`parse-torrent`）/ 文件清单与图片预览（torrent 缓存服务 + 浏览器端 P2P）仍然可用；
 - 不连接数据库，配置与历史不持久化（重启后回落到 `.env` 默认值），需要持久化的功能会降级。
 
-构建与部署：
+有两种部署方式，按需选择：
+
+#### 方式 A：关联 Git，推送即部署（推荐）
+
+Cloudflare 通过 webhook 在每次 `git push` 到生产分支时自动构建并部署。
+
+```bash
+# 1. 登录 Cloudflare（浏览器授权一次）
+npx wrangler login
+
+# 2. 创建 Pages 项目并关联 GitHub 仓库（按提示完成 GitHub 授权并选择仓库/分支）
+npx wrangler pages project create bt-preview --production-branch main
+```
+
+创建时会在浏览器里完成 GitHub 授权并选择 `ice-a/bt` 仓库。随后在 **Cloudflare 控制台 → Pages → bt-preview → Settings → Build & deployments** 填好：
+
+- **Build command**：`NITRO_PRESET=cloudflare_pages npm run build`
+- **Build output directory**：`dist`
+- **Node version**（可选，建议 20+）：在 Environment variables 里加 `NODE_VERSION=20`
+
+环境变量（与 `.env` 同名）在 **Settings → Environment variables** 里添加（如 `SEARCH_PROXY`、`SEARCH_TIMEOUT` 等），运行时由 `process.env` 读取。敏感值（如 `WEBPASSWORD`）点「Encrypt」保存。
+
+> 关联 Git 模式下 **`wrangler.toml` 的 `[vars]` 不会生效**（它只用于方式 B 的直接上传），env 一律在控制台配置。
+
+配置完成后，直接 `git push` 到 main 就会自动部署，无需再手动执行命令。
+
+#### 方式 B：手动上传（Direct Upload）
+
+不关联 Git，每次把本地构建产物推上去：
 
 ```bash
 # 用 Cloudflare preset 构建，产物输出到 dist/
 NITRO_PRESET=cloudflare_pages npm run build
 
-# 部署（需已安装 wrangler 并登录：npm i -g wrangler && wrangler login）
+# 部署（需先 wrangler login）
 npx wrangler pages deploy dist
 ```
 
-环境变量（与 `.env` 里的同名变量）在 Cloudflare 上通过以下任一方式注入，运行时由 `process.env` 读取：
-
-- 控制台：Pages → Settings → Environment variables；
-- 命令行：`npx wrangler pages secret put SEARCH_PROXY`（敏感值用 secret，不要写进 `wrangler.toml` 提交仓库）；
-- 或直接在 `wrangler.toml` 的 `[vars]` 中填写（仓库已附模板，注意不要把密码提交）。
+此方式下环境变量走 `wrangler.toml` 的 `[vars]` 或 `npx wrangler pages secret put`。
 
 `wrangler.toml` 已附带 `nodejs_compat` 兼容标志与变量模板；`mongodb` / `undici` / `webtorrent` 在 Cloudflare 构建时被别名到桩文件，运行时缺失即由调用方捕获并降级。
 
