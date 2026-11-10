@@ -2,11 +2,17 @@
 // 绕开 Vercel / Cloudflare 等 Serverless 不支持 UDP/DHT 的限制。
 // 服务端仍保留非 P2P 的缓存服务兜底；这里是真正的 P2P 取数据路径。
 
-// 浏览器只支持 WebRTC 节点，需要走 wss:// 的 tracker 才能发现对端
+// 浏览器端只支持 WebSocket tracker（wss/ws）。下列为 2026-11 实测可从网络连通的公共
+// tracker，WebTorrent 会并行连接全部、连不上的自动跳过；多列几个只是多几次 announce，开销很小。
+// 注意：可达性由「访客浏览器」所在网络决定——下面这组在本机网络实测可连：
+//   tracker.openwebtorrent.com / tracker.webtorrent.dev / tracker.files.fm:7073
+// 末尾的 btorrent.xyz 为常见公共兜底，部分区域可用（本机网络实测连不上，但并入并行列表无副作用）。
 const WS_TRACKERS = [
   'wss://tracker.openwebtorrent.com',
-  'wss://tracker.btorrent.xyz',
-  'wss://tracker.webtorrent.dev'
+  'wss://tracker.webtorrent.dev',
+  'wss://tracker.webtorrent.dev:443/announce',
+  'wss://tracker.files.fm:7073/announce',
+  'wss://tracker.btorrent.xyz'
 ]
 
 function normPath(p: string): string {
