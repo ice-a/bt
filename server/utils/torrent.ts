@@ -208,21 +208,35 @@ function extractInfoHash(magnet: string): string {
   return m ? m[1].toLowerCase() : ''
 }
 
-/** 通过公开的 torrent 缓存服务取 .torrent（纯 HTTPS，无需 P2P，Vercel 等 Serverless 可用） */
+/** 通过公开的 torrent 缓存服务取 .torrent（纯 HTTPS/HTTP，无需 P2P，Cloudflare 等 Serverless 也能出网） */
+// 列表为 2026-11 实测可达的服务；webtorrent 原生 tracker 类站点（torcache.net / thetorrent.org /
+// btcache.me 等）多数已关停，这里只保留还活着的，避免每次解析都白等超时。
 const TORRENT_CACHES: ((ih: string) => string)[] = [
   (ih) => `https://itorrents.org/torrent/${ih}.torrent`,
-  (ih) => `https://torcache.net/torrent/${ih}.torrent`,
-  (ih) => `https://thetorrent.org/${ih}`,
-  (ih) => `https://btcache.me/torrent/${ih}/download`
+  (ih) => `https://torrage.com/torrent/${ih}.torrent`,
+  (ih) => `https://zoink.ch/torrent/${ih}.torrent`
 ]
 
 async function fetchFromCache(infoHash: string): Promise<{ name: string; files: TorrentFileEntry[]; size: number } | null> {
   if (!infoHash) return null
   const results = await Promise.allSettled(
     TORRENT_CACHES.map(async (fn) => {
-      const res = await fetch(fn(infoHash), { redirect: 'follow', signal: AbortSignal.timeout(8000) })
+      const ctrl = new AbortController()
+      const timer = setTimeout(() => ctrl.abort(), 8000)
+      let res: Response
+      try {
+        res = await fetch(fn(infoHash), {
+          redirect: 'follow',
+          signal: ctrl.signal,
+          headers: { 'User-Agent': 'Mozilla/5.0 (BT-Preview)' }
+        })
+      } finally {
+        clearTimeout(timer)
+      }
       if (!res.ok) throw new Error(`status ${res.status}`)
       const buf = Buffer.from(await res.arrayBuffer())
+      // .torrent 是 bencode，首字节必为 'd'(0x64)；很多站点对未缓存的 hash 返回 HTML 页面（200），先快速排除
+      if (buf.length === 0 || buf[0] !== 0x64) throw new Error('not a torrent (html?)')
       const info = await parseTorrentBuffer(buf)
       if (!info.files?.length) throw new Error('no files')
       return { name: info.name, files: info.files, size: info.size }
