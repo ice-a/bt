@@ -168,6 +168,7 @@ onMounted(() => {
         </dl>
 
         <div class="row wrap">
+          <FavoriteButton :torrent="local" />
           <button class="btn btn-sm" @click="copyMagnet">复制磁力链</button>
           <a v-if="local.hasFile" class="btn btn-sm" :href="`/api/torrent/${local.infoHash}/file`">下载 .torrent</a>
           <a v-if="local.sourceUrl" class="btn btn-sm btn-ghost" :href="local.sourceUrl" target="_blank" rel="noreferrer noopener">

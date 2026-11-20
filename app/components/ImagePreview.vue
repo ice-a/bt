@@ -19,6 +19,7 @@ const errorText = ref('')
 const src = ref('')
 const progress = ref(0)
 const progressText = ref('')
+let requestToken = 0
 let objectUrl = ''
 
 const MIME: Record<string, string> = {
@@ -51,6 +52,7 @@ function revoke() {
 }
 
 async function load() {
+  const token = ++requestToken
   revoke()
   src.value = ''
   errorText.value = ''
@@ -69,6 +71,7 @@ async function load() {
       }
     })
     const mime = MIME[extOf(current.value?.path || '')] || 'application/octet-stream'
+    if (token !== requestToken) return
     objectUrl = URL.createObjectURL(new Blob([bytes], { type: mime }))
     src.value = objectUrl
     status.value = 'ok'
@@ -88,6 +91,11 @@ async function load() {
         throw new Error(message || `请求失败（HTTP ${res.status}）`)
       }
       objectUrl = URL.createObjectURL(await res.blob())
+      if (token !== requestToken) {
+        URL.revokeObjectURL(objectUrl)
+        objectUrl = ''
+        return
+      }
       src.value = objectUrl
       status.value = 'ok'
     } catch (err) {
@@ -113,6 +121,7 @@ watch(() => [props.index, props.infoHash, props.magnet], load, { immediate: true
 
 onMounted(() => window.addEventListener('keydown', onKey))
 onBeforeUnmount(() => {
+  requestToken++
   window.removeEventListener('keydown', onKey)
   revoke()
 })

@@ -165,6 +165,7 @@ onMounted(loadTorrents)
               <td class="num right dim hide-sm">{{ t.files ? t.files.length : t.fileCount ?? '未解析' }}</td>
               <td class="num right dim">{{ formatRelative(t.resolvedAt || t.creationDate) }}</td>
               <td class="right">
+                <FavoriteButton :torrent="t" />
                 <NuxtLink class="btn btn-sm" :to="{ path: `/torrent/${t.infoHash}`, query: { magnet: t.magnet } }">打开</NuxtLink>
               </td>
             </tr>

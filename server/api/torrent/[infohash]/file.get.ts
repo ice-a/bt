@@ -16,10 +16,7 @@ export default defineEventHandler(async (event) => {
   const bytes = Buffer.from(doc.fileBase64, 'base64')
   setHeader(event, 'content-type', 'application/x-bittorrent')
   setHeader(event, 'content-length', String(bytes.length))
-  setHeader(
-    event,
-    'content-disposition',
-    `attachment; filename="${encodeURIComponent((doc.name || infoHash).slice(0, 120))}.torrent"`
-  )
+  const filename = encodeURIComponent((doc.name || infoHash).slice(0, 120)) + '.torrent'
+  setHeader(event, 'content-disposition', `attachment; filename="${filename}"; filename*=UTF-8''${filename}`)
   return bytes
 })

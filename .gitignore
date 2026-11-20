@@ -10,3 +10,10 @@ dist
 
 # 由 scripts/copy-webtorrent.mjs 从依赖拷出的同源 UMD 包（构建时生成，不入库）
 public/webtorrent.min.js
+
+# wrangler 本地构建/调试产物
+.wrangler
+
+# 本项目用 npm，忽略 pnpm 临时生成的文件
+pnpm-lock.yaml
+pnpm-workspace.yaml

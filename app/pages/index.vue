@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import type { SearchResponse, TorrentView } from '~/types/api'
+import { copyText } from '~/utils/format'
+import { filterTorrents, type TorrentFilters } from '~/utils/torrentList'
+import { translateText } from '~/utils/i18n'
 
 type Tab = 'search' | 'file' | 'magnet'
 
@@ -26,16 +29,41 @@ const searching = ref(false)
 const response = ref<SearchResponse | null>(null)
 const page = ref(1)
 const pageSize = ref(20)
+const filters = reactive<TorrentFilters>({ text: '', source: '', size: '', seeded: false, sort: 'seeders' })
+const selectedHashes = ref<string[]>([])
+
+const sourceOptions = computed(() => {
+  const values = new Map<string, string>()
+  for (const item of response.value?.results || []) {
+    if (item.source) values.set(item.source, item.sourceLabel || item.source)
+  }
+  return [...values.entries()].sort((a, b) => a[1].localeCompare(b[1], 'zh-CN'))
+})
+
+const filteredResults = computed(() => filterTorrents(response.value?.results || [], filters))
 
 const pagedResults = computed(() => {
   if (!response.value) return []
   const start = (page.value - 1) * pageSize.value
-  return response.value.results.slice(start, start + pageSize.value)
+  return filteredResults.value.slice(start, start + pageSize.value)
 })
 
 const totalPages = computed(() => {
   if (!response.value) return 0
-  return Math.ceil(response.value.results.length / pageSize.value)
+  return Math.ceil(filteredResults.value.length / pageSize.value)
+})
+
+const selectedResults = computed(() => (response.value?.results || []).filter((item) => selectedHashes.value.includes(item.infoHash)))
+const allVisibleSelected = computed(() => pagedResults.value.length > 0 && pagedResults.value.every((item) => selectedHashes.value.includes(item.infoHash)))
+
+watch(filters, () => {
+  page.value = 1
+  selectedHashes.value = []
+}, { deep: true })
+
+watch(response, () => {
+  selectedHashes.value = []
+  page.value = 1
 })
 
 onMounted(async () => {
@@ -71,6 +99,7 @@ async function doSearch(term?: string) {
   keyword.value = q
   searching.value = true
   page.value = 1
+  selectedHashes.value = []
   try {
     response.value = await $fetch<SearchResponse>('/api/search', {
       query: { q, providers: activeProviders.value.join(',') }
@@ -84,6 +113,36 @@ async function doSearch(term?: string) {
     searching.value = false
     refreshHot()
   }
+}
+
+function toggleSelected(infoHash: string) {
+  selectedHashes.value = selectedHashes.value.includes(infoHash)
+    ? selectedHashes.value.filter((hash) => hash !== infoHash)
+    : [...selectedHashes.value, infoHash]
+}
+
+function toggleAllVisible() {
+  const visible = pagedResults.value.map((item) => item.infoHash)
+  if (allVisibleSelected.value) {
+    selectedHashes.value = selectedHashes.value.filter((hash) => !visible.includes(hash))
+  } else {
+    selectedHashes.value = [...new Set([...selectedHashes.value, ...visible])]
+  }
+}
+
+async function copySelectedMagnets() {
+  const links = selectedResults.value.map((item) => item.magnet).filter(Boolean)
+  if (!links.length) return
+  const ok = await copyText(links.join('\n'))
+  pushToast(ok ? 'ok' : 'err', ok ? translateText('已复制 {count} 条磁力链').replace('{count}', String(links.length)) : '复制失败，请检查剪贴板权限')
+}
+
+function clearFilters() {
+  filters.text = ''
+  filters.source = ''
+  filters.size = ''
+  filters.seeded = false
+  filters.sort = 'seeders'
 }
 
 async function pickFile(file: File) {
@@ -194,7 +253,7 @@ function previewLink(item: TorrentView) {
 
       <div v-if="response" class="row wrap small">
         <span class="mono dim">
-          {{ response.results.length }} 条结果 · {{ response.durationMs }}ms ·
+          {{ filteredResults.length }} / {{ response.results.length }} 条结果 · {{ response.durationMs }}ms ·
           {{ response.stored ? '已写入 MongoDB' : 'MongoDB 未连接，未记录' }}
         </span>
         <span class="spacer" />
@@ -204,10 +263,46 @@ function previewLink(item: TorrentView) {
       </div>
 
       <div v-if="response" class="panel rise">
-        <div class="panel-bd tight">
-          <table v-if="response.results.length" class="table">
+        <div class="panel-hd">
+          <span class="label">FILTERS</span>
+          <span class="spacer" />
+          <button class="btn btn-sm btn-ghost" type="button" @click="clearFilters">清除筛选</button>
+        </div>
+        <div class="panel-bd row wrap filter-bar">
+          <input v-model="filters.text" class="input filter-search" :aria-label="translateText('按名称或 infoHash 筛选')" placeholder="按名称或 infoHash 筛选" />
+          <select v-model="filters.source" class="select filter-select" :aria-label="translateText('来源筛选')">
+            <option value="">全部来源</option>
+            <option v-for="[id, label] in sourceOptions" :key="id" :value="id">{{ label }}</option>
+          </select>
+          <select v-model="filters.size" class="select filter-select" :aria-label="translateText('大小筛选')">
+            <option value="">全部大小</option>
+            <option value="small">小于 1 GB</option>
+            <option value="medium">1–10 GB</option>
+            <option value="large">10 GB 以上</option>
+          </select>
+          <select v-model="filters.sort" class="select filter-select" :aria-label="translateText('排序方式')">
+            <option value="seeders">按做种数</option>
+            <option value="newest">按发布时间</option>
+            <option value="size-desc">按大小降序</option>
+            <option value="size-asc">按大小升序</option>
+            <option value="name">按名称</option>
+          </select>
+          <label class="check"><input v-model="filters.seeded" type="checkbox" /> 仅看有做种</label>
+        </div>
+      </div>
+
+      <div v-if="response" class="panel rise">
+        <div class="panel-ft row wrap">
+          <label class="check"><input type="checkbox" :checked="allVisibleSelected" :indeterminate="!allVisibleSelected && pagedResults.some(item => selectedHashes.includes(item.infoHash))" :disabled="!pagedResults.length" @change="toggleAllVisible" /> 全选本页</label>
+          <span class="mono small dim" aria-live="polite">{{ translateText('已选 {count} 条').replace('{count}', String(selectedResults.length)) }}</span>
+          <span class="spacer" />
+          <button class="btn btn-sm" type="button" :disabled="!selectedResults.length" @click="copySelectedMagnets">复制选中磁力链</button>
+        </div>
+        <div class="panel-bd tight table-scroll">
+          <table v-if="filteredResults.length" class="table">
             <thead>
               <tr>
+                <th class="select-col"><span class="sr-only">选择</span></th>
                 <th style="width: 46%">名称</th>
                 <th class="hide-sm">来源</th>
                 <th class="right">大小</th>
@@ -220,6 +315,7 @@ function previewLink(item: TorrentView) {
             </thead>
             <tbody>
               <tr v-for="item in pagedResults" :key="item.infoHash">
+                <td class="select-col"><input type="checkbox" :checked="selectedHashes.includes(item.infoHash)" :aria-label="translateText('选择 {name}').replace('{name}', item.name)" @change="toggleSelected(item.infoHash)" /></td>
                 <td class="name">{{ item.name }}</td>
                 <td class="hide-sm"><span class="tag">{{ item.sourceLabel }}</span></td>
                 <td class="num right">{{ formatBytes(item.size) }}</td>
@@ -228,15 +324,18 @@ function previewLink(item: TorrentView) {
                 <td class="num right warn hide-sm">{{ item.leechers ?? '—' }}</td>
                 <td class="num right dim hide-sm">{{ formatRelative(item.addedAt) }}</td>
                 <td class="right">
-                  <NuxtLink class="btn btn-sm" :to="previewLink(item)">预览</NuxtLink>
+                  <div class="row right-actions">
+                    <FavoriteButton :torrent="item" />
+                    <NuxtLink class="btn btn-sm" :to="previewLink(item)">预览</NuxtLink>
+                  </div>
                 </td>
               </tr>
             </tbody>
           </table>
-          <div v-else class="empty">没有结果。换个关键词，或在「设置」里配置代理后再试。</div>
+          <div v-else class="empty">{{ translateText(response.results.length ? '没有符合筛选条件的结果。可以清除筛选后再试。' : '没有结果。换个关键词，或在「设置」里配置代理后再试。') }}</div>
         </div>
 
-        <div v-if="response && response.results.length > pageSize" class="panel-ft row center py-md">
+        <div v-if="response && filteredResults.length > pageSize" class="panel-ft row center py-md">
           <button class="btn btn-sm btn-ghost" :disabled="page <= 1" @click="page--">上一页</button>
           <span class="mono small dim mx-lg">第 {{ page }} / {{ totalPages }} 页</span>
           <button class="btn btn-sm btn-ghost" :disabled="page >= totalPages" @click="page++">下一页</button>

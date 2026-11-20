@@ -19,6 +19,7 @@ export interface TorrentView {
   leechers?: number | null
   comment?: string | null
   creationDate?: string | null
+  addedAt?: string | null
   resolvedAt?: string | null
   resolveError?: string | null
   /** 服务端是否保存了原始 .torrent 文件，可提供下载 */

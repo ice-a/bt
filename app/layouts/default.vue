@@ -42,6 +42,7 @@ async function logout() {
         <nav class="nav">
           <NuxtLink to="/" :class="{ active: route.path === '/' }">搜索</NuxtLink>
           <NuxtLink to="/history" :class="{ active: route.path === '/history' }">历史</NuxtLink>
+          <NuxtLink to="/favorites" :class="{ active: route.path === '/favorites' }">收藏夹</NuxtLink>
           <NuxtLink to="/settings" :class="{ active: route.path === '/settings' }">设置</NuxtLink>
         </nav>
 

@@ -133,10 +133,11 @@ export async function resolveMetadataClient(
 ): Promise<{ name: string; files: { path: string; length: number }[]; size: number }> {
   const onProgress = opts.onProgress
   const timeoutMs = opts.timeoutMs ?? 30000
-  const WebTorrent = await loadWebTorrent()
-  const client = new WebTorrent()
-  enterSession()
+  let client: any = null
   try {
+    const WebTorrent = await loadWebTorrent()
+    client = new WebTorrent()
+    enterSession()
     const torrent = client.add(withWsTrackers(magnet))
     const report = (phase: ResolveProgress['phase'], message?: string) => {
       const peers = torrent.numPeers ?? 0
@@ -162,7 +163,7 @@ export async function resolveMetadataClient(
   } finally {
     leaveSession()
     try {
-      client.destroy()
+      client?.destroy()
     } catch {
       /* ignore */
     }
@@ -176,10 +177,11 @@ export async function readFileBytesClient(
 ): Promise<ArrayBuffer> {
   const onProgress = opts.onProgress
   const timeoutMs = opts.timeoutMs ?? 25000
-  const WebTorrent = await loadWebTorrent()
-  const client = new WebTorrent()
-  enterSession()
+  let client: any = null
   try {
+    const WebTorrent = await loadWebTorrent()
+    client = new WebTorrent()
+    enterSession()
     const torrent = client.add(withWsTrackers(magnet))
     await waitForMetadata(torrent, timeoutMs)
     const target = (torrent.files || []).find(
@@ -202,7 +204,19 @@ export async function readFileBytesClient(
     torrent.on('wire', report)
     if (typeof target.on === 'function') target.on('download', report)
     report()
-    const ab = await target.arrayBuffer()
+    const ab = await new Promise<ArrayBuffer>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('图片下载超时：暂时没有可用的做种节点')), timeoutMs)
+      target.arrayBuffer().then(
+        (bytes: ArrayBuffer) => {
+          clearTimeout(timer)
+          resolve(bytes)
+        },
+        (err: unknown) => {
+          clearTimeout(timer)
+          reject(err)
+        }
+      )
+    })
     onProgress?.({
       progress: 1,
       peers: torrent.numPeers ?? 0,
@@ -214,7 +228,7 @@ export async function readFileBytesClient(
   } finally {
     leaveSession()
     try {
-      client.destroy()
+      client?.destroy()
     } catch {
       /* ignore */
     }
